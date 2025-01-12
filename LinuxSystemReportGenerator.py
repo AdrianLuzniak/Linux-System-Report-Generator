@@ -1,5 +1,3 @@
-import os
-import sys
 import psutil
 import platform
 import getpass
@@ -8,6 +6,7 @@ import socket
 import pandas as pd
 from datetime import datetime
 import shutil
+from openpyxl.styles import Border, Side, Alignment
 
 
 def collect_system_info():
@@ -74,7 +73,7 @@ def get_superusers():
 
 
 def get_packages():
-    "Supports only yum and dnf package managers"
+    "Supports only yum and dnf package managers, can add more to package_managers"
 
     package_managers = ["dnf", "yum"]
     packages = []
@@ -114,6 +113,43 @@ def save_to_excel(system_info, packages, filename):
     with pd.ExcelWriter(filename) as writer:
         system_info_df.to_excel(writer, sheet_name="System Info", index=False)
         packages_df.to_excel(writer, sheet_name="Installed Packages", index=False)
+
+        # Load workbook, to adjust columns
+        workbook = writer.book
+        system_info_sheet = workbook["System Info"]
+        packages_sheet = workbook["Installed Packages"]
+
+        # Ajdust width of column to content size
+        for sheet in [system_info_sheet, packages_sheet]:
+            for col in sheet.columns:  # sheet.columns - all columns as list, col - list of cells in one column
+                max_length = 0
+                column = col[0].column_letter  # Get the column letter
+                for cell in col:  # Get the longest cell in sheet
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(cell.value)
+                    except Exception as e:
+                        print(f"Error processing cell {cell.coordinate}: {e}")
+                        continue  # Skip to next cell in the column
+                adjusted_width = max_length + 2
+                sheet.column_dimensions[column].width = adjusted_width
+
+        # Add border to tables in both sheets
+        thin_border = Border(
+            left=Side(style="thin"),
+            right=Side(style="thin"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin"),
+        )
+
+        # Center values in columns and add borders
+        center_alignment = Alignment(horizontal="center", vertical="center")
+
+        for sheet in [system_info_sheet, packages_sheet]:
+            for row in sheet.iter_rows():
+                for cell in row:
+                    cell.border = thin_border
+                    cell.alignment = center_alignment
 
 
 def main():
