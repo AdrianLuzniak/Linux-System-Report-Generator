@@ -14,8 +14,8 @@ def collect_system_info():
         "System": platform.system(),
         "Hostname": socket.gethostname(),
         "Architecture": platform.architecture()[0],
+        "OS Version": get_os_version(),
         "Kernel Version": platform.release(),
-        "OS Version": platform.version(),
         "Machine type": platform.machine(),
         "Processor": platform.processor(),
         "CPU Count": psutil.cpu_count(logical=True),
@@ -33,6 +33,18 @@ def collect_system_info():
         "Superuser(s)": get_superusers(),
     }
     return system_info
+
+
+def get_os_version():
+    try:
+        with open("/etc/os-release", "r") as file:
+            os_info = file.readlines()
+            for line in os_info:
+                if line.startswith("PRETTY_NAME"):
+                    return line.split("=")[1].strip().strip('"')
+
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 
 def get_uptime_in_days():
